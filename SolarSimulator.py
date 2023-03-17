@@ -12,41 +12,58 @@ import PySAM.ResourceTools as tools
 from functools import reduce
 import itertools
 
-# New PySAM Class
-class Solar():
-	def __init__(self, home):
-		# Setup Solar System with PVWATT
+class SolarSimulator():
+	def __init__(self, system_info):
+		# create new instance of pvwatt8
 		self.pvwatt = pvwatt8.new()
-		self.pvwatt.SystemDesign.assign(home['specs'])
-		self.pvwatt.AdjustmentFactors.assign({'constant':0})
-		# Weather Fetcher
-		nsrdbfetcher = tools.FetchResourceFiles(
-			tech = 'solar',
-			nrel_api_key='bfpWE6iufkhWFk9DfN1G7M4FYeUIlWNp3MCOaQ2Z',
-			nrel_api_email='carxtega16@gmail.com')
-		# Get Weather Data
-		self.location = [(home['location']['lon'], home['location']['lat'])]
-		nsrdbfetcher.fetch(self.location)
-		nsrdb_path_dict = nsrdbfetcher.resource_file_paths_dict
-		nsrdb_fp = nsrdb_path_dict[self.location[0]]
-		self.pvwatt.SolarResource.assign({'solar_resource_file':nsrdb_fp})
+		# assign system information passed to constructor
+		self.system_info = system_info
+		# set system specs and fetch weather data
+		self.set_system_specs()
+		self.fetch_weather_data()
 
-	def simulate_solar(self,ac_cap = 7,dc_cap = 7):
-		sys = 'r'+str(ac_cap)+'|'+str(dc_cap)
-		# Update System Specs
-		self.pvwatt.SystemDesign.assign({'system_capacity':dc_cap})
-		self.pvwatt.SystemDesign.assign({'dc_ac_ratio':dc_cap/ac_cap})
-		# Run Simulation
+	def set_system_specs(self):
+		# assign system information specs to system_design attribute of pvwatt
+		self.pvwatt.SystemDesign.assign(self.system_info['specs'])
+		# assign adjustment factor dict to adjustment_factors attribute  of pvwatt
+		self.pvwatt.AdjustmentFactors.assign({'constant':0})
+
+	def fetch_weather_data(self):
+		# get latitude and longitude from system info to fetch weather data
+		location = [(self.system_info['location']['lon'], self.system_info['location']['lat'])]
+		# create instance of FetchResourceFiles using nrel api
+		nrel = tools.FetchResourceFiles(
+			tech='solar',
+			nrel_api_key='bfpWE6iufkhWFk9DfN1G7M4FYeUIlWNp3MCOaQ2Z',
+			nrel_api_email='carxtega16@gmail.com'
+		)
+		# fetch resource files based on location
+		nsrdb_path_dict = nrel.fetch(location).resource_file_paths_dict
+		# assign fetched solar resource data path to solar_resource_file attribute of pvwatt
+		self.pvwatt.SolarResource.assign({'solar_resource_file':nsrdb_path_dict[location[0]]})
+		
+	def simulate_solar(self,ac_cap=7,dc_cap=7):
+		# create system id from input ac capacity and dc capacity
+		sys_id = 'r'+str(ac_cap)+'|'+str(dc_cap)
+		# update system specs in pvwatt
+		self.pvwatt.SystemDesign.assign({
+			'system_capacity':dc_cap,
+			'dc_ac_ratio':dc_cap/ac_cap
+		})
+		# execute solar simulation 
 		self.pvwatt.execute()
-		# Simulation Data
-		hrly_sim = pd.read_csv(self.pvwatt.SolarResource.solar_resource_file, skiprows = 2) \
-			[['Year','Month','Day','Hour','Minute','Dew Point','DHI','DNI','GHI','Surface Albedo','Pressure','Temperature','Wind Direction','Wind Speed']]
+		# read hourly simulation data using pandas
+		hrly_sim = pd.read_csv(
+			self.pvwatt.SolarResource.solar_resource_file,
+			skiprows=2,
+			usecols=['Month','Day','Hour','DHI','DNI','GHI','Temperature']
+		)
+		# get solar output data from pvwatt and assign to 'solar' column of hourly sim data frame
 		hrly_sim['solar'] = self.pvwatt.Outputs.ac
-		hrly_sim['solar'] = hrly_sim['solar'].apply(lambda x: x/1000)
-		shapes = hrly_sim.groupby(['Month','Day','Hour'])['solar'] \
-			.agg('mean').reset_index()
-		solar_system = {'spec':sys,'shape':shapes}
-		return solar_system
+		# group hourly simulation data by month, day and hour, get mean solar value for each group
+		shapes = hrly_sim.groupby(['Month','Day','Hour'])['solar'].agg('mean').reset_index()
+		# return simulation configuration info along with the calculated shapes
+		return {'spec':sys_id, 'shape':shapes}
 
 	def compare_systems(self):
 		# Capacity Options
