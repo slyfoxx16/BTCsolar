@@ -6,11 +6,11 @@ This GitHub repository contains a Python script that estimates the size of a sol
 
 To use this script, you will need to have the following installed:
 
-Python 3.x
-PySAM
-Pandas
-Numpy
-Usage
+* Python 3.x
+* PySAM
+* Pandas
+* Numpy
+* Usage
 
 Clone the repository to your local machine.
 Navigate to the repository's directory using the command line.
