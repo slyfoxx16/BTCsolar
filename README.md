@@ -10,7 +10,8 @@ To use this script, you will need to have the following installed:
 * PySAM
 * Pandas
 * Numpy
-* Usage
+* Matplotlib
+* seaborn
 
 Clone the repository to your local machine.
 Navigate to the repository's directory using the command line.
