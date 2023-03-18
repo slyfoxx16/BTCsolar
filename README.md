@@ -22,7 +22,7 @@ Note: This script is intended for educational and estimation purposes only. It d
 
 ### Contributors
 
-This script was developed by Carlos Ortega and is available under the MIT license.
+This script was developed by Carlos Ortega.
 
 ### Resources
 
