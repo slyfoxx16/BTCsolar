@@ -12,6 +12,10 @@ class BTCminer():
 		self.yearly_kWh = 8760 * (W/1000)
 
 	def fit_solar(self, pv_system, nrel_api_key, nrel_api_email, n_iter):
+
+		print(f"OSolving for Optimal Solar System")
+		print(f"Target kWh: {self.yearly_kWh}")
+
 		# Enter Location and specs of pv system
 		soalr_sys = SolarSimulator.SolarSimulator(pv_system, nrel_api_key, nrel_api_email)
 
@@ -45,5 +49,3 @@ class BTCminer():
 
 		print(f"Optimal Solar Capacity (kW): ac={best_params[0]}:dc={best_params[1]}")
 		print(f"Output with best parameters: {sum(soalr_sys.simulate_solar(*best_params)['shape'].solar)/1000}")
-		
-		return best_params
